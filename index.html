@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Meteo Automatico</title>
+<style>
+body {
+    background:#1e1e1e;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    font-family:Arial;
+    color:white;
+}
+
+.meteo-container {
+    position:relative;
+    width:280px;
+    height:280px;
+    border-radius:50%;
+    background:radial-gradient(circle at top,#6fb1fc,#1c3c6b);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    text-align:center;
+    box-shadow:0 0 30px rgba(0,0,0,.6);
+}
+
+.meteo-icon {
+    position:absolute;
+    font-size:150px;
+    opacity:.25;
+}
+
+.meteo-data {
+    z-index:2;
+    font-weight:bold;
+    line-height:1.6;
+    text-shadow:0 2px 4px rgba(0,0,0,.7);
+}
+
+.temp { font-size:34px; }
+.location { font-size:14px; opacity:.9; }
+</style>
+</head>
+<body>
+
+<div class="meteo-container">
+    <div id="icon" class="meteo-icon">☁️</div>
+    <div class="meteo-data">
+        <div class="location" id="location">📍 rilevamento...</div>
+        <div class="temp" id="temp">--°C</div>
+        💨 <span id="wind">--</span> km/h<br>
+        🌧️ <span id="rainProb">--</span>%<br>
+        💧 <span id="rainMm">--</span> mm
+    </div>
+</div>
+
+<script>
+navigator.geolocation.getCurrentPosition(
+    pos => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+
+        loadLocationName(lat, lon);
+        loadWeather(lat, lon);
+    },
+    err => alert("Permesso posizione negato")
+);
+
+function loadWeather(lat, lon) {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m&hourly=precipitation_probability,precipitation&timezone=auto`;
+
+    fetch(url)
+    .then(r => r.json())
+    .then(d => {
+        document.getElementById("temp").textContent = d.current.temperature_2m + "°C";
+        document.getElementById("wind").textContent = d.current.wind_speed_10m;
+        document.getElementById("rainProb").textContent = d.hourly.precipitation_probability[0];
+        document.getElementById("rainMm").textContent = d.hourly.precipitation[0];
+        document.getElementById("icon").textContent = getIcon(d.current.weather_code);
+    });
+}
+
+function loadLocationName(lat, lon) {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`;
+
+    fetch(url)
+    .then(r => r.json())
+    .then(d => {
+        const a = d.address;
+        const place = a.suburb || a.neighbourhood || a.city || a.town || "Località";
+        document.getElementById("location").textContent = "📍 " + place;
+    });
+}
+
+function getIcon(code) {
+    if (code === 0) return "☀️";
+    if ([1,2].includes(code)) return "🌤️";
+    if (code === 3) return "☁️";
+    if ([45,48].includes(code)) return "🌫️";
+    if ([61,63,65].includes(code)) return "🌧️";
+    if ([71,73,75].includes(code)) return "❄️";
+    if ([95,96,99].includes(code)) return "⛈️";
+    return "🌥️";
+}
+</script>
+
+</body>
+</html>
